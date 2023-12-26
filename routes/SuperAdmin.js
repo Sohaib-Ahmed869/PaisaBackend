@@ -10,6 +10,7 @@ const Advertisement = require('../models/Advertisement');
 const Voucher = require('../models/Voucher');
 const Website = require('../models/Website');
 const SocialMedia = require('../models/SocialMedia');
+const app = express();
 
 //-----------------------------ADMIN--------------------------------------------
 
@@ -27,14 +28,19 @@ router.post('/addAdmin', async (req, res) => {
             email,
             password: hashedPassword,
             dob,
+            
         };
 
         const admin = new Admin(newAdmin);
 
         // Save the admin to the database
         await admin.save();
+
+        return res.status(201).json({ message: 'Admin registered successfully' });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
+        
     }
 }
 );
@@ -44,15 +50,17 @@ router.post('/blockAdmin', async (req, res) => {
     try {
         const { email } = req.body;
 
-        const admin = Admin.findOne({ email: email });
+        const admin = await Admin.findOne({ email: email });
 
         if (admin) {
             admin.block = true;
             await admin.save();
+            return res.status(200).json({ message: 'Admin blocked successfully' });
         }
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 }
 );
@@ -62,15 +70,18 @@ router.post('/unblockAdmin', async (req, res) => {
     try {
         const { email } = req.body;
 
-        const admin = Admin.findOne({ email: email });
+        const admin = await Admin.findOne({ email: email });
 
         if (admin) {
             admin.block = false;
             await admin.save();
+            return res.status(200).json({ message: 'Admin unblocked successfully' });
         }
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
+    
     }
 }
 );
@@ -119,11 +130,22 @@ router.get('/viewBlockedAdmins', async (req, res) => {
 // add advertisement
 router.post('/addAdvertisement', async (req, res) => {
     try {
-        const { name, image } = req.body;
+        const file = req.files.file;
+        const fileName = file.name;
+        const fileSize = file.data.length;
+        const extension = path.extname(fileName);
+        const allowedExtensions = /png|jpg|jpeg|pdf/;
+        const md5 = file.md5;
+        const dbPath = '/images/advertisement/' + md5 + extension;
 
+        if (!allowedExtensions.test(extension)) {
+            return res.status(400).send('Invalid extension.');
+        }
+        await util.promisify(file.mv)('./uploads/' + md5 + extension);
+        res.send({ fileName, fileSize, URL });
         const newAdvertisement = {
-            name,
-            image
+            name: req.body.name,
+            image: dbPath
         };
 
         const advertisement = new Advertisement(newAdvertisement);
@@ -133,7 +155,6 @@ router.post('/addAdvertisement', async (req, res) => {
     } catch (error) {
         console.log(error);
     }
-
 }
 );
 
@@ -195,6 +216,7 @@ router.get('/getRandomAdvertisement', async (req, res) => {
 );
 
 
+
 //-----------------------------VOUCHER--------------------------------------------
 // add voucher
 router.post('/addVoucher', async (req, res) => {
@@ -211,8 +233,11 @@ router.post('/addVoucher', async (req, res) => {
         const voucher = new Voucher(newVoucher);
 
         await voucher.save();
+        return res.status(200).json({ message: 'Voucher added successfully' });
     } catch (error) {
+       
         console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 }
 );
@@ -234,7 +259,7 @@ router.get('/viewVoucher', async (req, res) => {
     try {
         const { voucher_code } = req.body;
 
-        const Vouch = Voucher.findOne({ voucher_code: voucher_code });
+        const Vouch = await Voucher.findOne({ voucher_code: voucher_code });
 
         res.status(200).json({ Vouch });
 
@@ -250,11 +275,12 @@ router.post('/setVoucherAsUsed', async (req, res) => {
     try {
         const { voucher_code } = req.body;
 
-        const voucher = Voucher.findOne({ voucher_code: voucher_code });
+        const voucher = await  Voucher.findOne({ voucher_code: voucher_code });
 
         if (voucher) {
             voucher.is_used = true;
             await voucher.save();
+            return res.status(200).json({ message: 'Voucher set to used' });
         }
 
     } catch (error) {
@@ -264,28 +290,30 @@ router.post('/setVoucherAsUsed', async (req, res) => {
 );
 
 // delete voucher
-router.post('/deleteVoucher', async (req, res) => {
+router.delete('/deleteVoucher', async (req, res) => {
     try {
         const { voucher_code } = req.body;
 
-        const voucher = Voucher.findOne({ voucher_code: voucher_code });
+        const voucher_new = await Voucher.findOne({ voucher_code: voucher_code });
 
-        if (voucher) {
-            await voucher.delete();
+        if (voucher_new) {
+            await Voucher.deleteOne({ voucher_code: voucher_code });
+
+            return res.status(200).json({ message: 'Voucher deleted successfully' });
         }
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 }
 );
-
 //get a random voucher
 router.get('/getRandomVoucher', async (req, res) => {
     try {
         const vouchers = await Voucher.find({});
 
-        const random = Math.floor(Math.random() * vouchers.length);
+        const random = await Math.floor(Math.random() * vouchers.length);
 
         res.status(200).json({ voucher: vouchers[random] });
     } catch (error) {
@@ -359,21 +387,39 @@ router.put('/updateExpressShipping', async (req, res) => {
 //use file upload for icon
 router.post('/addSocialMedia', async (req, res) => {
     try {
-        const { site, link } = req.body;
+        const file = req.files.file;
+        const site = req.body.site;
+        const link = req.body.link;
+        const extension = path.extname(file.name);
+        const newFileName = site + extension;
+        const uploadPath = path.join(__dirname, '../public/images/socialMedia', newFileName);
+        const dbPath = '/images/socialMedia/' + newFileName;
+
+        file.mv(uploadPath, async (error) => {
+            if (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Error uploading file' });
+            }
+        }
+
+        );
 
         const newSocialMedia = {
             site,
-            link
+            link,
+            icon: dbPath
         };
 
         const socialMedia = new SocialMedia(newSocialMedia);
 
         await socialMedia.save();
+
     } catch (error) {
         console.log(error);
     }
 }
 );
+
 
 // view all social media
 router.get('/viewAllSocialMedia', async (req, res) => {
@@ -388,7 +434,7 @@ router.get('/viewAllSocialMedia', async (req, res) => {
 );
 
 // delete social media
-router.delete ('/deleteSocialMedia', async (req, res) => {
+router.delete('/deleteSocialMedia', async (req, res) => {
     try {
         const { site } = req.body;
 
@@ -414,6 +460,40 @@ router.put('/updateSocialMedia', async (req, res) => {
 
         if (socialMedia) {
             socialMedia.link = link;
+            await socialMedia.save();
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+);
+
+// update social media icon
+
+router.put('/updateSocialMediaIcon', async (req, res) => {
+    try {
+        const file = req.files.file;
+        const site = req.body.site;
+        const extension = path.extname(file.name);
+        const newFileName = site + extension;
+        const uploadPath = path.join(__dirname, '../public/images/socialMedia', newFileName);
+        const dbPath = '/images/socialMedia/' + newFileName;
+
+        file.mv(uploadPath, async (error) => {
+            if (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Error uploading file' });
+            }
+        }
+
+        );
+
+        const socialMedia = await SocialMedia.findOne({ site: site });
+
+        if (socialMedia) {
+            socialMedia.icon = dbPath;
             await socialMedia.save();
         }
 
