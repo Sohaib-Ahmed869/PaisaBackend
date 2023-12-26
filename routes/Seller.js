@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const fileUpload = require('express-fileupload');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
@@ -10,22 +9,28 @@ const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
 const Seller = require('../models/Seller');
-const { verifyToken } = require('../middleware/VerifyToken');
+const { verifySellerToken } = require('../middleware/VerifySellerToken');
 
 //-----------------------------PRODUCT--------------------------------------------
 
 // add product
 router.post('/addProduct', async (req, res) => {
     try {
-        const { name, price, description, category, stock, image } = req.body;
+        const { name, price, description, category, stock} = req.body;
+
+        const token = req.header('Authorization');
+        const decoded = jwt.verify(token, 'your_secret_key');
+        const sellerId = decoded.id;
+
 
         const newProduct = {
+            prod_code: name + sellerId,
             name,
             price,
             description,
             category,
-            stock,
-            image,
+            qty: stock,
+            seller_id: sellerId,
         };
 
         const product = new Product(newProduct);
@@ -40,30 +45,78 @@ router.post('/addProduct', async (req, res) => {
 }
 );
 
-// update product
-router.post('/updateProduct', async (req, res) => {
+// add image to product
+router.post('/addImageToProduct', async (req, res) => {
+    const file = req.files.file;
+    const fileName = file.name;
+    const uploadPath = path.join(__dirname, '../public/images', fileName);
+    const dbPath = '/images/' + fileName;
+
     try {
-        const { name, price, description, category, stock, image } = req.body;
+        file.mv(uploadPath, async (error) => {
+            if (error) {
+                console.error(error);
+                return res.status(500).json({ message: 'Error uploading image' });
+            }
 
-        const product = Product.findOne({ name: name });
+            // Get the product name from the request body
+            const { name } = req.body;
 
-        if (product) {
-            product.name = name;
-            product.price = price;
-            product.description = description;
-            product.category = category;
-            product.stock = stock;
-            product.image = image;
+            // Find the product by name
+            const product = await Product.findOne({ name: name });
 
+            if (!product) {
+                return res.status(404).json({ message: 'Product not found' });
+            }
+
+            // Add the image path to the product
+            product.images.push(dbPath);
+
+            // Save the product to the database
             await product.save();
-        }
 
-        res.status(201).json({ message: 'Product updated successfully' });
-    } catch (error) {
-        console.log(error);
+            res.status(201).json({ message: 'Image uploaded successfully' });
+        });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 }
 );
+
+// delete image from product
+router.delete('/deleteImageFromProduct', async (req, res) => {
+    try {
+        const { name, image } = req.body;
+
+        // Find the product by name
+        const product = await Product.findOne({ name: name });
+
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        // Delete the image from the server
+        const imagePath = path.join(__dirname, '../public', image);
+        fs.unlinkSync(imagePath);
+
+        // Remove the image path from the product
+        product.images = product.images.filter((img) => img !== image);
+
+        // Save the product to the database
+        await product.save();
+
+        res.status(201).json({ message: 'Image deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}
+);
+
+// update product
+
 
 // deactivate product
 router.put('/deactivateProduct', async (req, res) => {
@@ -124,7 +177,7 @@ router.get('/viewAllProductsForSeller', async (req, res) => {
 );
 
 // view one product
-router.get('/viewProduct', async (req, res) => {
+router.get('/viewProduct', verifySellerToken, async (req, res) => {
     try {
         const { name } = req.body;
 
@@ -201,7 +254,7 @@ router.put('/putDiscount', async (req, res) => {
 // -----------------------------ORDER--------------------------------------------
 
 // view all orders
-router.get('/viewAllOrders', async (req, res) => {
+router.get('/viewAllOrders',verifySellerToken, async (req, res) => {
     try {
         const token = req.header('Authorization');
         const decoded = jwt.verify(token, 'your_secret_key');
@@ -217,7 +270,7 @@ router.get('/viewAllOrders', async (req, res) => {
 );
 
 // view one order
-router.get('/viewOrder', async (req, res) => {
+router.get('/viewOrder',verifySellerToken, async (req, res) => {
     try {
         const { id } = req.body;
 
@@ -233,7 +286,7 @@ router.get('/viewOrder', async (req, res) => {
 );
 
 // update order status
-router.put('/updateOrderStatus', async (req, res) => {
+router.put('/updateOrderStatus',verifySellerToken, async (req, res) => {
     try {
         const { id, status } = req.body;
 
@@ -264,7 +317,7 @@ router.put('/updateOrderStatus', async (req, res) => {
 
 // -----------------------------PAYMENT--------------------------------------------
 // view all payments
-router.get('/viewAllPayments', async (req, res) => {
+router.get('/viewAllPayments',verifySellerToken, async (req, res) => {
     try {
         const token = req.header('Authorization');
         const decoded = jwt.verify(token, 'your_secret_key');
@@ -282,7 +335,7 @@ router.get('/viewAllPayments', async (req, res) => {
 // -----------------------------PROFILE--------------------------------------------
 
 // view profile
-router.get('/viewProfile', async (req, res) => {
+router.get('/viewProfile',verifySellerToken, async (req, res) => {
     try {
         const token = req.header('Authorization');
         const decoded = jwt.verify(token, 'your_secret_key');
@@ -298,7 +351,7 @@ router.get('/viewProfile', async (req, res) => {
 );
 
 // update profile
-router.put('/updateProfile', async (req, res) => {
+router.put('/updateProfile',verifySellerToken, async (req, res) => {
     try {
         const { name, email, password, dob, address, contact } = req.body;
 

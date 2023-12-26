@@ -34,7 +34,7 @@ router.post('/signup', async (req, res) => {
                 await admin.save();
 
 
-                res.status(201).json({ message: 'Admin registered successfully' });
+                return res.status(201).json({ message: 'Admin registered successfully' });
 
                 break;
             case 'Super Admin':
@@ -45,10 +45,12 @@ router.post('/signup', async (req, res) => {
                     dob,
                 };
 
-                
+                const superAdmin = new SuperAdmin(newSuperAdmin);
 
+                // Save the super admin to the database
+                await superAdmin.save();
 
-                res.status(201).json({ message: 'Super Admin registered successfully' });
+                return res.status(201).json({ message: 'Super Admin registered successfully' });
                 break;
             case 'Seller':
                 const newSeller = new Seller({
@@ -62,18 +64,15 @@ router.post('/signup', async (req, res) => {
                 await newSeller.save();
 
 
-                res.status(201).json({ message: 'Seller registered successfully' });
+                return res.status(201).json({ message: 'Seller registered successfully' });
 
                 break;
             default:
                 return res.status(400).json({ error: 'Invalid user type' });
         }
-
-    
-        res.status(201).json({ message: 'User registered successfully' });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 });
 
@@ -128,11 +127,13 @@ router.post('/signin/superadmin', async (req, res) => {
         if (!isPasswordValid) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
+    
 
         // Generate a JWT token
-        const token = jwt.sign({name: superadmin.name, type: 'SuperAdmin'});
+        const token = jwt.sign({name: superadmin.name, type: 'SuperAdmin'}, 'your_secret_key', { expiresIn: '1h' }); // Replace with your actual secret key
+        console.log(token);
 
-        res.status(200).json({ token });
+        return res.status(200).json({ token });
 
     } catch (error) {
         console.error(error);
@@ -165,7 +166,7 @@ router.post('/signin/admin', async (req, res) => {
         }
 
         // Generate a JWT token
-        const token = jwt.sign({name: admin.name, type: 'Admin'});
+        const token = jwt.sign({name: admin.name, type: 'Admin'}, 'your_secret_key', { expiresIn: '1h' }); // Replace with your actual secret key
 
         res.status(200).json({ token });
 
@@ -201,8 +202,7 @@ router.post('/signin/seller', async (req, res) => {
         }
 
         // Generate a JWT token
-        const token = jwt.sign({name: seller.name, type: 'Seller', id: seller._id});
-
+        const token = jwt.sign({name: seller.name, type: 'Seller', id: seller._id}, 'your_secret_key', { expiresIn: '1h' }); // Replace with your actual secret key
         res.status(200).json({ token });
 
     } catch (error) {
@@ -236,7 +236,7 @@ router.post('/signin/customer', async (req, res) => {
         }
 
         // Generate a JWT token
-        const token = jwt.sign({ name: customer.name, type: 'Customer', id: customer._id });
+        const token = jwt.sign({ name: customer.name, type: 'Customer', id: customer._id }, 'your_secret_key', { expiresIn: '1h' }); // Replace with your actual secret key
 
         res.status(200).json({ token });
     } catch (error) {
