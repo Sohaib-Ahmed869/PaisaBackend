@@ -24,7 +24,12 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         min: 1,
         max: 5
-    }
+    },
+    status: {
+        type: String,
+        enum: ['Pending', 'Confirmed', 'Delivered', 'Cancelled'],
+        default: 'Pending'
+    },
 });
 
 const Order = mongoose.model('Order', orderSchema);

@@ -11,6 +11,7 @@ const productSchema = new mongoose.Schema({
   qty: { type: Number, default: 0 },
   approval: { type: Boolean, default: false }, 
   discount: { type: Number, default: 0 },
+  active : { type: Boolean, default: true },
 });
 
 const Product = mongoose.model('Product', productSchema);

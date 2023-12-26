@@ -8,3 +8,5 @@ const superadminSchema = new mongoose.Schema({
 });
 
 const SuperAdmin = mongoose.model('SuperAdmin', superadminSchema);
+
+module.exports = SuperAdmin;
