@@ -24,6 +24,10 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         min: 1,
         max: 5
+    },
+    orderStatus: {
+        type: Boolean,
+        default: false
     }
 });
 

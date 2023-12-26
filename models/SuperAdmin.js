@@ -7,4 +7,5 @@ const superadminSchema = new mongoose.Schema({
     dob: { type: Date, required: true }
 });
 
-const SuperAdmin = mongoose.model('Admin', superadminSchema);
+const SuperAdmin = mongoose.model('SuperAdmin', superadminSchema);
+module.exports = SuperAdmin;
