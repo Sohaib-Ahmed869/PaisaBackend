@@ -47,6 +47,10 @@ router.post('/addProduct', async (req, res) => {
 
 // add image to product
 router.post('/addImageToProduct', async (req, res) => {
+    if (!req.files) {
+        return res.status(400).json({ message: 'No files were uploaded' });
+    }
+
     const file = req.files.file;
     const fileName = file.name;
     const uploadPath = path.join(__dirname, '../public/images', fileName);
