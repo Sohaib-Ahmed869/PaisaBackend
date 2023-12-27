@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
-
+const multer = require('multer');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
@@ -12,11 +12,22 @@ const Seller = require('../models/Seller');
 const { verifySellerToken } = require('../middleware/VerifySellerToken');
 
 //-----------------------------PRODUCT--------------------------------------------
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, path.join(__dirname, '../public/images'));
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname);
+    },
+});
+
+
+const upload = multer({ storage: storage });
 
 // add product
 router.post('/addProduct', async (req, res) => {
     try {
-        const { name, price, description, category, stock} = req.body;
+        const { name, price, description, category, stock } = req.body;
 
         const token = req.header('Authorization');
         const decoded = jwt.verify(token, 'your_secret_key');
@@ -123,32 +134,35 @@ router.delete('/deleteImageFromProduct', async (req, res) => {
 
 
 // deactivate product
-router.put('/deactivateProduct', async (req, res) => {
-    try{
+router.put('/deactivateProduct', verifySellerToken, async (req, res) => {
+    try {
         const { name } = req.body;
 
-        const product = Product.find({ name: name });
+        console.log(name);
+        const product = await Product.findOne({ name: name });
 
         if (product) {
             product.active = false;
-
             await product.save();
+            console.log(product);
+
         }
 
-        res.status(201).json({ message: 'Product deactivated successfully' });
+        return res.status(201).json({ message: 'Product deactivated successfully' });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ message: 'Internal Server Error' });
 
     }
 }
 );
 
 // activate product
-router.put('/activateProduct', async (req, res) => {
-    try{
+router.put('/activateProduct', verifySellerToken, async (req, res) => {
+    try {
         const { name } = req.body;
 
-        const product = Product.find({ name: name });
+        const product = await Product.findOne({ name: name });
 
         if (product) {
             product.active = true;
@@ -156,9 +170,10 @@ router.put('/activateProduct', async (req, res) => {
             await product.save();
         }
 
-        res.status(201).json({ message: 'Product activated successfully' });
+        return res.status(201).json({ message: 'Product activated successfully' });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ message: 'Internal Server Error' });
 
     }
 }
@@ -173,9 +188,10 @@ router.get('/viewAllProductsForSeller', async (req, res) => {
 
         const products = await Product.find({ seller_id: sellerId });
 
-        res.status(200).json({ products });
+        return res.status(200).json({ products });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ message: 'Internal Server Error' });
     }
 }
 );
@@ -205,28 +221,29 @@ router.put('/updateQuantity', async (req, res) => {
         const decoded = jwt.verify(token, 'your_secret_key');
         const sellerId = decoded.id;
         // Find the product by name
-        const product = Product.findOne({ name: name , seller_id: sellerId});
+        const product = await Product.findOne({ name: name, seller_id: sellerId });
 
-        if(!product){
-            res.status(400).json({ message: 'Product not found' });
+        if (!product) {
+            return res.status(400).json({ message: 'Product not found' });
         }
 
         if (product) {
+            console.log(product);
             product.qty = quantity;
 
             await product.save();
         }
-
-        res.status(201).json({ message: 'Quantity updated successfully' });
+        return res.status(201).json({ message: 'Quantity updated successfully' });
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ message: 'Internal Server Error' });
     }
 }
 );
 
 // put discount
-router.put('/putDiscount', async (req, res) => {
+router.put('/updateDiscount', async (req, res) => {
     try {
         const { name, discount } = req.body;
 
@@ -236,21 +253,23 @@ router.put('/putDiscount', async (req, res) => {
 
 
         // Find the product by name
-        const product = Product.findOne({ name: name , seller_id: sellerId});
+        const product = await Product.findOne({ name: name, seller_id: sellerId });
 
-        if(!product){
-            res.status(400).json({ message: 'Product not found' });
+        if (!product) {
+            return res.status(400).json({ message: 'Product not found' });
         }
         if (product) {
+            //find by name and update
             product.discount = discount;
 
             await product.save();
         }
 
-        res.status(201).json({ message: 'Discount updated successfully' });
+        return res.status(201).json({ message: 'Discount updated successfully' });
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ message: 'Internal Server Error' });
     }
 }
 );
@@ -258,7 +277,7 @@ router.put('/putDiscount', async (req, res) => {
 // -----------------------------ORDER--------------------------------------------
 
 // view all orders
-router.get('/viewAllOrders',verifySellerToken, async (req, res) => {
+router.get('/viewAllOrders', verifySellerToken, async (req, res) => {
     try {
         const token = req.header('Authorization');
         const decoded = jwt.verify(token, 'your_secret_key');
@@ -274,7 +293,7 @@ router.get('/viewAllOrders',verifySellerToken, async (req, res) => {
 );
 
 // view one order
-router.get('/viewOrder',verifySellerToken, async (req, res) => {
+router.get('/viewOrder', verifySellerToken, async (req, res) => {
     try {
         const { id } = req.body;
 
@@ -290,7 +309,7 @@ router.get('/viewOrder',verifySellerToken, async (req, res) => {
 );
 
 // update order status
-router.put('/updateOrderStatus',verifySellerToken, async (req, res) => {
+router.put('/updateOrderStatus', verifySellerToken, async (req, res) => {
     try {
         const { id, status } = req.body;
 
@@ -299,9 +318,9 @@ router.put('/updateOrderStatus',verifySellerToken, async (req, res) => {
         const sellerId = decoded.id;
 
         // Find the order by id
-        const order = Order.findOne({ _id: id , seller_id: sellerId});
+        const order = Order.findOne({ _id: id, seller_id: sellerId });
 
-        if(!order){
+        if (!order) {
             res.status(400).json({ message: 'Order not found' });
         }
 
@@ -321,7 +340,7 @@ router.put('/updateOrderStatus',verifySellerToken, async (req, res) => {
 
 // -----------------------------PAYMENT--------------------------------------------
 // view all payments
-router.get('/viewAllPayments',verifySellerToken, async (req, res) => {
+router.get('/viewAllPayments', verifySellerToken, async (req, res) => {
     try {
         const token = req.header('Authorization');
         const decoded = jwt.verify(token, 'your_secret_key');
@@ -339,7 +358,7 @@ router.get('/viewAllPayments',verifySellerToken, async (req, res) => {
 // -----------------------------PROFILE--------------------------------------------
 
 // view profile
-router.get('/viewProfile',verifySellerToken, async (req, res) => {
+router.get('/viewProfile', verifySellerToken, async (req, res) => {
     try {
         const token = req.header('Authorization');
         const decoded = jwt.verify(token, 'your_secret_key');
@@ -355,7 +374,7 @@ router.get('/viewProfile',verifySellerToken, async (req, res) => {
 );
 
 // update profile
-router.put('/updateProfile',verifySellerToken, async (req, res) => {
+router.put('/updateProfile', verifySellerToken, async (req, res) => {
     try {
         const { name, email, password, dob, address, contact } = req.body;
 

@@ -6,6 +6,8 @@ const fileUpload = require('express-fileupload');
 const userRouter = require('./routes/User');
 const sellerRouter = require('./routes/Seller');
 const superAdminRouter = require('./routes/SuperAdmin');
+const adminRouter = require('./routes/Admin');
+const customerRouter = require('./routes/Customer');
 const { verifyToken } = require('./middleware/VerifyToken');
 const app = express();
 const port = 3001;
@@ -18,6 +20,8 @@ app.use(fileUpload());
 app.use('/user', userRouter);
 app.use('/seller', sellerRouter);
 app.use('/superadmin', superAdminRouter);
+app.use('/admin', adminRouter);
+app.use('/customer', customerRouter);
 
 
 mongoose.connect('mongodb://127.0.0.1:27017/ecommerce').then(() => {

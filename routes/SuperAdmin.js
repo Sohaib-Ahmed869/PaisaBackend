@@ -39,25 +39,28 @@ router.post('/addAdmin', async (req, res) => {
     } catch (error) {
         console.log(error);
         return res.status(500).json({ error: 'Internal server error' });
-        
+
     }
 }
 );
 
 // block admin
-router.post('/blockAdmin', async (req, res) => {
+router.put('/blockAdmin', async (req, res) => {
     try {
         const { email } = req.body;
 
-        const admin = Admin.findOne({ email: email });
+        const newadmin = await Admin.findOne({ email: email });
 
-        if (admin) {
-            admin.block = true;
-            await admin.save();
+        if (newadmin) {
+            newadmin.block = true;
+            await newadmin.save();
+            
+            return res.status(200).json({ message: 'Admin blocked successfully' });
         }
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 }
 );
@@ -110,6 +113,7 @@ router.get('/viewAdmin', async (req, res) => {
 router.get('/viewBlockedAdmins', async (req, res) => {
     try {
         const admins = await Admin.find({ block: true });
+        
 
         res.status(200).json({ admins });
     } catch (error) {
@@ -227,8 +231,11 @@ router.post('/addVoucher', async (req, res) => {
         const voucher = new Voucher(newVoucher);
 
         await voucher.save();
+
+        return res.status(201).json({ message: 'Voucher added successfully' });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 }
 );
@@ -280,21 +287,24 @@ router.post('/setVoucherAsUsed', async (req, res) => {
 );
 
 // delete voucher
-router.post('/deleteVoucher', async (req, res) => {
-    try {
-        const { voucher_code } = req.body;
+    router.delete('/deleteVoucher', async (req, res) => {
+        try {
+            const { voucher_code } = req.body;
 
-        const voucher = Voucher.findOne({ voucher_code: voucher_code });
+            const voucher_new = await Voucher.findOne({ voucher_code: voucher_code });
 
-        if (voucher) {
-            await voucher.delete();
+            if (voucher_new) {
+                await Voucher.deleteOne({ voucher_code: voucher_code });
+
+                return res.status(200).json({ message: 'Voucher deleted successfully' });
+            }
+
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({ error: 'Internal server error' });
         }
-
-    } catch (error) {
-        console.log(error);
     }
-}
-);
+    );
 
 //get a random voucher
 router.get('/getRandomVoucher', async (req, res) => {
