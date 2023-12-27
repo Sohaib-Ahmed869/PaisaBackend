@@ -10,12 +10,14 @@ const router = express.Router();
 //place order
 router.post('/placeorder', async (req, res) => {
     try {
-        const { customer, products, sizes, price } = req.body;
+        const { customer, products, sizes, price,seller_id,customerName } = req.body;
         const newOrder = new Order({
             customer,
             products,
             sizes,
-            price
+            price,
+            seller_id,
+            customerName
         });
         await newOrder.save();
         return res.status(201).json({ message: 'Order placed successfully' });

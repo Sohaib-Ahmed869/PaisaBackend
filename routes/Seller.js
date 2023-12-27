@@ -12,18 +12,50 @@ const Seller = require('../models/Seller');
 const { verifySellerToken } = require('../middleware/VerifySellerToken');
 
 //-----------------------------PRODUCT--------------------------------------------
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '../public/images'));
-    },
-    filename: function (req, file, cb) {
-        cb(null, file.originalname);
-    },
-});
 
-
+// Multer configuration
+const storage = multer.memoryStorage(); // Store the image in memory
 const upload = multer({ storage: storage });
 
+router.get('/getAllProducts', async (req, res) => {
+    try {
+      const token = req.header('Authorization');
+        const decoded = jwt.verify(token, 'your_secret_key');
+        const sellerId = decoded.id;
+  
+      // Fetch all products for the seller
+      const products = await Product.find({ seller_id: sellerId });
+  
+      if (!products || products.length === 0) {
+        return res.status(404).json({ message: 'No products found' });
+      }
+  
+      // Customize the response to include product details and images
+      const productsWithImages = products.map(product => {
+        return {
+          name: product.name,
+          price: product.price,
+          description: product.description,
+          category: product.category,
+          quantity: product.qty,
+          images: product.img.map(img => ({
+            contentType: img.contentType,
+            data: img.data.toString('base64'), // Convert image data to base64
+          })),
+          active: product.active,
+          approval: product.approval,
+          discount: product.discount,
+          // Add other product details as needed
+        };
+      });
+  
+      res.status(200).json({ products: productsWithImages });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+  
 // add product
 router.post('/addProduct', async (req, res) => {
     try {
@@ -55,6 +87,44 @@ router.post('/addProduct', async (req, res) => {
     }
 }
 );
+
+//add image to product using multer
+router.put('/addImgToProduct', async (req, res) => {
+    try {
+        const { name, image } = req.body;
+
+        const token = req.header('Authorization');
+        const decoded = jwt.verify(token, 'your_secret_key');
+        const sellerId = decoded.id;
+
+        console.log(name, sellerId);
+
+        const product = await Product.findOne({ name: name, seller_id: sellerId });
+
+        if (!product) {
+            return res.status(400).json({ message: 'Product not found' });
+        }
+
+        if (image) {
+            const img = {
+                data: Buffer.from(image, 'base64'), // Decode base64 image data
+                contentType: 'image/png', // Update with the actual content type
+            };
+
+            console.log(img);
+
+            product.img.push(img);
+            await product.save();
+        } else {
+            return res.status(400).json({ message: 'Image data not provided' });
+        }
+
+        res.status(201).json({ message: 'Image added successfully' });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
 
 // add image to product
 router.post('/addImageToProduct', async (req, res) => {
@@ -311,14 +381,14 @@ router.get('/viewOrder', verifySellerToken, async (req, res) => {
 // update order status
 router.put('/updateOrderStatus', verifySellerToken, async (req, res) => {
     try {
-        const { id, status } = req.body;
+        const { orderID, status } = req.body;
 
         const token = req.header('Authorization');
         const decoded = jwt.verify(token, 'your_secret_key');
         const sellerId = decoded.id;
 
         // Find the order by id
-        const order = Order.findOne({ _id: id, seller_id: sellerId });
+        const order = await Order.findOne({ _id: orderID, seller_id: sellerId });
 
         if (!order) {
             res.status(400).json({ message: 'Order not found' });

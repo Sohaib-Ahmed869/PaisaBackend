@@ -6,6 +6,10 @@ const orderSchema = new mongoose.Schema({
         ref: 'Customer',
         required: true
     },
+    customerName: {
+        type: String,
+        required: true
+    },
     products: [{
         type: String,
         required: true
@@ -29,6 +33,11 @@ const orderSchema = new mongoose.Schema({
         type: String,
         enum: ['Pending', 'Confirmed', 'Delivered', 'Cancelled'],
         default: 'Pending'
+    },
+    seller_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Seller',
+        required: true
     },
 });
 
