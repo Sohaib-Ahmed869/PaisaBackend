@@ -233,9 +233,9 @@ router.post('/addVoucher', async (req, res) => {
         const voucher = new Voucher(newVoucher);
 
         await voucher.save();
-        return res.status(200).json({ message: 'Voucher added successfully' });
+
+        return res.status(201).json({ message: 'Voucher added successfully' });
     } catch (error) {
-       
         console.log(error);
         return res.status(500).json({ error: 'Internal server error' });
     }
