@@ -28,7 +28,8 @@ const orderSchema = new mongoose.Schema({
     orderStatus: {
         type: Boolean,
         default: false
-    }
+    },
+    orderDate: { type: Date, required: true },
 });
 
 const Order = mongoose.model('Order', orderSchema);

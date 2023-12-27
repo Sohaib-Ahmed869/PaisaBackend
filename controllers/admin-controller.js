@@ -5,6 +5,7 @@ const Seller = require('../models/Seller.js');
 const Admin = require('../models/Admin.js')
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const Category = require('../models/Categories.js')
 require('dotenv').config();
 const secret =  process.env.JWT_SECRET;
 const getUnapprovedProducts = async (req, res) => {
@@ -36,7 +37,7 @@ const adminLogin = async (req, res) => {
 
     const token = jwt.sign({ email: existingAdmin.email, id: existingAdmin._id }, secret, { expiresIn: '1h' });
 
-    res.status(200).json({ result: existingAdmin, token });
+    res.status(200).json({ result: existingAdmin, token,  });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message || 'Internal Server Error' });
@@ -141,7 +142,7 @@ const customerBlockStatus = async (req, res) => {
 const addOrder = async (req, res) => {
   try {
 
-    const { customer, products, sizes, price, feedback, rating, orderStatus } = req.body;
+    const { customer, products, sizes, price, feedback, rating, orderStatus,orderDate } = req.body;
 
     // Create a new order
     const newOrder = new Order({
@@ -151,7 +152,8 @@ const addOrder = async (req, res) => {
       price,
       feedback,
       rating,
-      orderStatus
+      orderStatus,
+      orderDate,
     });
 
     // Save the order to the database
@@ -284,18 +286,75 @@ const addAdmin = async (req, res) => {
 };
 const getAdminProfile = async (req, res) => {
   try {
-    const adminId = req.user.id;
+    const adminId = req.params.adminId;
     const admin = await Admin.findById(adminId);
 
     if (!admin) {
       return res.status(404).json({ message: 'Admin not found' });
     }
+
     res.status(200).json(admin);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+//extra stub endpoints
+const getAllOrders = async (req,res) =>{
+  try {
+    const orders = await Order.find();
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+const getProductByID =async (req,res) => {
+  let productId=req.params.id;
+  let product =await Product.findOne({_id : productId});
+  if(!product){
+    return res.status(404).send("The product with the given ID was not found.");
+    }
+    res.status(200).json(product);
+    
+}
+const getAllProducts = async (req,res) => {
+  try {
+    const products = await Product.find();
+    res.status(200).json(products);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+
+
+} 
+
+const addCategory =  async (req, res) => {
+  try {
+      const { name } = req.body;
+      const category = new Category({
+          name
+      });
+      const savedCategory = await category.save();
+      res.status(201).json(savedCategory);
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Server error' });
+  }
+}
+
+
+const getAllCategories =  async (req, res) => {
+  try {
+      const categories = await Category.find();
+      res.status(200).json( categories );
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Server error' });
+  }
+}
+
 module.exports = {
   getUnapprovedProducts,
   updateProductApprovalStatus,
@@ -313,4 +372,9 @@ module.exports = {
   adminLogin,
   addAdmin,
   getAdminProfile,
+  getAllOrders,
+  getProductByID,
+  getAllProducts,
+  addCategory,
+  getAllCategories,
 };

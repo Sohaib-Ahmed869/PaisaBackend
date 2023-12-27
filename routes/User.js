@@ -169,7 +169,7 @@ router.post('/signin/admin', async (req, res) => {
         // Generate a JWT token
         const token = jwt.sign({name: admin.name, type: 'Admin'}, secret, { expiresIn: '1h' }); // Replace with your actual secret key
 
-        res.status(200).json({ token });
+        res.status(200).json({ result: admin, token });
 
     } catch (error) {
         console.error(error);
