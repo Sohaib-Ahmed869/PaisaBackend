@@ -12,7 +12,7 @@ const productSchema = new mongoose.Schema({
   size: [String],
   prod_code: { type: String, required: true, unique: true },
   seller_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', required: true },
-  qty: { type: Number, default: 0 },
+  qty: { type: Number, required: true},
   approval: { type: Boolean, default: false }, 
   discount: { type: Number, default: 0 },
   active : { type: Boolean, default: true },

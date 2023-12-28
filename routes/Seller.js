@@ -3,7 +3,6 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
-const bcrypt = require('bcrypt');
 const multer = require('multer');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
@@ -59,7 +58,8 @@ router.get('/getAllProducts', async (req, res) => {
 // add product
 router.post('/addProduct', async (req, res) => {
     try {
-        const { name, price, description, category, stock } = req.body;
+        const { name, price, description, category, quantity } = req.body;
+        console.log(name, price, description, category, quantity);
 
         const token = req.header('Authorization');
         const decoded = jwt.verify(token, 'your_secret_key');
@@ -72,7 +72,7 @@ router.post('/addProduct', async (req, res) => {
             price,
             description,
             category,
-            qty: stock,
+            qty: quantity,
             seller_id: sellerId,
         };
 

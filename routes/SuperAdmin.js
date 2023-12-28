@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const bcrypt = require('bcrypt');
 const fileUpload = require('express-fileupload');
 const fs = require('fs');
@@ -12,6 +13,8 @@ const Website = require('../models/Website');
 const SocialMedia = require('../models/SocialMedia');
 const app = express();
 
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 //-----------------------------ADMIN--------------------------------------------
 
 // add admin
@@ -28,6 +31,7 @@ router.post('/addAdmin', async (req, res) => {
             email,
             password: hashedPassword,
             dob,
+            
         };
 
         const admin = new Admin(newAdmin);
@@ -39,22 +43,21 @@ router.post('/addAdmin', async (req, res) => {
     } catch (error) {
         console.log(error);
         return res.status(500).json({ error: 'Internal server error' });
-
+        
     }
 }
 );
 
 // block admin
-router.put('/blockAdmin', async (req, res) => {
+router.post('/blockAdmin', async (req, res) => {
     try {
         const { email } = req.body;
 
-        const newadmin = await Admin.findOne({ email: email });
+        const admin = await Admin.findOne({ email: email });
 
-        if (newadmin) {
-            newadmin.block = true;
-            await newadmin.save();
-            
+        if (admin) {
+            admin.block = true;
+            await admin.save();
             return res.status(200).json({ message: 'Admin blocked successfully' });
         }
 
@@ -70,15 +73,18 @@ router.post('/unblockAdmin', async (req, res) => {
     try {
         const { email } = req.body;
 
-        const admin = Admin.findOne({ email: email });
+        const admin = await Admin.findOne({ email: email });
 
         if (admin) {
             admin.block = false;
             await admin.save();
+            return res.status(200).json({ message: 'Admin unblocked successfully' });
         }
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
+    
     }
 }
 );
@@ -113,7 +119,6 @@ router.get('/viewAdmin', async (req, res) => {
 router.get('/viewBlockedAdmins', async (req, res) => {
     try {
         const admins = await Admin.find({ block: true });
-        
 
         res.status(200).json({ admins });
     } catch (error) {
@@ -125,95 +130,97 @@ router.get('/viewBlockedAdmins', async (req, res) => {
 
 //-----------------------------ADVERTISEMENT--------------------------------------------
 
-// add advertisement
 router.post('/addAdvertisement', async (req, res) => {
     try {
-        const file = req.files.file;
-        const fileName = file.name;
-        const fileSize = file.data.length;
-        const extension = path.extname(fileName);
-        const allowedExtensions = /png|jpg|jpeg|pdf/;
-        const md5 = file.md5;
-        const dbPath = '/images/advertisement/' + md5 + extension;
+        const {name, image} = req.body;
 
-        if (!allowedExtensions.test(extension)) {
-            return res.status(400).send('Invalid extension.');
+        const img = {
+            data: Buffer.from(image, 'base64'),
+            contentType: 'image/png'
         }
-        await util.promisify(file.mv)('./uploads/' + md5 + extension);
-        res.send({ fileName, fileSize, URL });
+
         const newAdvertisement = {
-            name: req.body.name,
-            image: dbPath
+            name,
+            image: img
         };
 
         const advertisement = new Advertisement(newAdvertisement);
 
         await advertisement.save();
 
+        return res.status(201).json({ message: 'Advertisement added successfully' });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
+
+    }
+}
+);
+
+router.get('/viewRandomAdvertisement', async (req, res) => {
+    try {
+        const advertisements = await Advertisement.find({});
+
+        const random = Math.floor(Math.random() * advertisements.length);
+
+        const advertisement = advertisements[random];
+
+        const advertisementWithImage = {
+            name: advertisement.name,
+            image: {
+                data: advertisement.image.data.toString('base64'),
+                contentType: advertisement.image.contentType
+            }
+        }
+        res.status(200).json({ advertisement: advertisementWithImage });
     } catch (error) {
         console.log(error);
     }
 }
 );
 
-// view all advertisements
 router.get('/viewAllAdvertisements', async (req, res) => {
     try {
         const advertisements = await Advertisement.find({});
 
-        res.status(200).json({ advertisements });
+        const advertisementsWithImage = advertisements.map((advertisement) => {
+            return {
+                name: advertisement.name,
+                image: {
+                    data: advertisement.image.data.toString('base64'),
+                    contentType: advertisement.image.contentType
+                }
+            }
+        });
+
+        res.status(200).json({ advertisements: advertisementsWithImage });
     } catch (error) {
         console.log(error);
     }
 }
 );
 
-// view one advertisement
-router.get('/viewAdvertisement', async (req, res) => {
-    try {
-        const { name } = req.body;
+router.delete('/deleteAdvertisement', async (req, res) => {
 
-        const advertisement = await Advertisement.findOne({ name: name });
-
-        res.status(200).json({ advertisement });
-    } catch (error) {
-        console.log(error);
-    }
-}
-);
-
-// delete advertisement
-router.post('/deleteAdvertisement', async (req, res) => {
     try {
         const { name } = req.body;
 
         const advertisement = await Advertisement.findOne({ name: name });
 
         if (advertisement) {
-            await advertisement.delete();
+            await Advertisement.deleteOne({ name: name });
+
+            return res.status(200).json({ message: 'Advertisement deleted successfully' });
+
         }
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
+
     }
 }
 );
-
-//get a random advertisement
-router.get('/getRandomAdvertisement', async (req, res) => {
-    try {
-        const advertisements = await Advertisement.find({});
-
-        const random = Math.floor(Math.random() * advertisements.length);
-
-        res.status(200).json({ advertisement: advertisements[random] });
-    } catch (error) {
-        console.log(error);
-    }
-}
-);
-
-
 
 //-----------------------------VOUCHER--------------------------------------------
 // add voucher
@@ -257,7 +264,7 @@ router.get('/viewVoucher', async (req, res) => {
     try {
         const { voucher_code } = req.body;
 
-        const Vouch = Voucher.findOne({ voucher_code: voucher_code });
+        const Vouch = await Voucher.findOne({ voucher_code: voucher_code });
 
         res.status(200).json({ Vouch });
 
@@ -273,11 +280,12 @@ router.post('/setVoucherAsUsed', async (req, res) => {
     try {
         const { voucher_code } = req.body;
 
-        const voucher = Voucher.findOne({ voucher_code: voucher_code });
+        const voucher = await  Voucher.findOne({ voucher_code: voucher_code });
 
         if (voucher) {
             voucher.is_used = true;
             await voucher.save();
+            return res.status(200).json({ message: 'Voucher set to used' });
         }
 
     } catch (error) {
@@ -287,31 +295,30 @@ router.post('/setVoucherAsUsed', async (req, res) => {
 );
 
 // delete voucher
-    router.delete('/deleteVoucher', async (req, res) => {
-        try {
-            const { voucher_code } = req.body;
+router.delete('/deleteVoucher', async (req, res) => {
+    try {
+        const { voucher_code } = req.body;
 
-            const voucher_new = await Voucher.findOne({ voucher_code: voucher_code });
+        const voucher_new = await Voucher.findOne({ voucher_code: voucher_code });
 
-            if (voucher_new) {
-                await Voucher.deleteOne({ voucher_code: voucher_code });
+        if (voucher_new) {
+            await Voucher.deleteOne({ voucher_code: voucher_code });
 
-                return res.status(200).json({ message: 'Voucher deleted successfully' });
-            }
-
-        } catch (error) {
-            console.log(error);
-            return res.status(500).json({ error: 'Internal server error' });
+            return res.status(200).json({ message: 'Voucher deleted successfully' });
         }
-    }
-    );
 
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}
+);
 //get a random voucher
 router.get('/getRandomVoucher', async (req, res) => {
     try {
         const vouchers = await Voucher.find({});
 
-        const random = Math.floor(Math.random() * vouchers.length);
+        const random = await Math.floor(Math.random() * vouchers.length);
 
         res.status(200).json({ voucher: vouchers[random] });
     } catch (error) {

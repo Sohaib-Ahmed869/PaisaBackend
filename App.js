@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
 const fileUpload = require('express-fileupload');
 const userRouter = require('./routes/User');
 const sellerRouter = require('./routes/Seller');

@@ -1,48 +1,29 @@
 const express = require('express');
-const router = express.Router();
-const jwt = require('jsonwebtoken');
-const fs = require('fs');
-const path = require('path');
-const bcrypt = require('bcrypt');
-const Category = require('../models/Categories');
-
-router.post('/addCategory', async (req, res) => {
-    try {
-        const { name } = req.body;
-        const category = new Category({
-            name
-        });
-        await category.save();
-        res.status(201).json({ message: 'Category added successfully' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
-    }
-}
-);
-
-router.get('/getCategories', async (req, res) => {
-    try {
-        const categories = await Category.find();
-        res.status(200).json({ categories });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
-    }
-}
-);
-
-router.get('/getCategory/:name', async (req, res) => {
-    try {
-        const category = await Category.findOne({ name: req.params.name });
-        res.status(200).json({ category });
-    }
-    catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error' });
-    }
-}
-);
+const adminRouter = express.Router();
+const adminController = require('../controller/admin-controller.js');
+const authMiddleware = require('../middleware/authMiddleware.js');
 
 
-module.exports = router;
+
+adminRouter.get('/unapproved-products', adminController.getUnapprovedProducts);
+adminRouter.put('/approve-product/:productId', adminController.updateProductApprovalStatus);
+adminRouter.post('/add-product', adminController.addProduct);
+adminRouter.put('/confirm-order/:orderId', adminController.processOrder);
+adminRouter.get('/unconfirmed-orders', adminController.getUnconfirmedOrders);
+adminRouter.get('/all-customers', adminController.getAllCustomers);
+adminRouter.put('/customer-block-status/:customerId',adminController.customerBlockStatus);
+adminRouter.get('/all-sellers', adminController.getAllSellers);
+adminRouter.get('/all-orders', adminController.getAllOrders);
+adminRouter.get('/all-products', adminController.getAllProducts);
+adminRouter.put('/seller-block-status/:sellerId', adminController.sellerBlockStatus);
+adminRouter.post('/add-order', adminController.addOrder);
+adminRouter.post('/add-category', adminController.addCategory);
+adminRouter.get('/all-categories', adminController.getAllCategories);
+
+//adminRouter.post('/add-customer', adminController.addCustomer);
+adminRouter.post('/add-seller', adminController.addSeller);
+adminRouter.put('/edit-profile/:adminId',adminController.updateAdminProfile);
+adminRouter.post('/add-admin', adminController.addAdmin);
+adminRouter.get('/profile/:adminId', adminController.getAdminProfile);
+adminRouter.get('/product/:id', adminController.getProductByID);
+module.exports = adminRouter;

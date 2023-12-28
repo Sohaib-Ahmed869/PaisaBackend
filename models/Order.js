@@ -39,6 +39,20 @@ const orderSchema = new mongoose.Schema({
         ref: 'Seller',
         required: true
     },
+    order_date: {
+        type: Date,
+        default: Date.now
+    },
+    payment_status: {
+        type: String,
+        enum: ['Pending', 'Paid'],
+        default: 'Pending'
+    },
+    payment_mode: {
+        type: String,
+        enum: ['COD', 'Online'],
+        default: 'COD'
+    },
 });
 
 const Order = mongoose.model('Order', orderSchema);
