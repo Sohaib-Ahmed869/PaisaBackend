@@ -4,22 +4,21 @@ const orderSchema = new mongoose.Schema({
     customer: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Customer',
-        required: true
     },
     customerName: {
         type: String,
-        required: true
+
     },
     products: [{
         type: String,
-        required: true
+
     }],
     sizes: [{
         type: String
     }],
     price: {
         type: Number,
-        required: true
+
     },
     feedback: {
         type: String
@@ -37,7 +36,7 @@ const orderSchema = new mongoose.Schema({
     seller_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Seller',
-        required: true
+
     },
     order_date: {
         type: Date,

@@ -392,52 +392,57 @@ router.put('/updateExpressShipping', async (req, res) => {
 //use file upload for icon
 router.post('/addSocialMedia', async (req, res) => {
     try {
-        const file = req.files.file;
-        const site = req.body.site;
-        const link = req.body.link;
-        const extension = path.extname(file.name);
-        const newFileName = site + extension;
-        const uploadPath = path.join(__dirname, '../public/images/socialMedia', newFileName);
-        const dbPath = '/images/socialMedia/' + newFileName;
+        const { site, link, image } = req.body;
 
-        file.mv(uploadPath, async (error) => {
-            if (error) {
-                console.error(error);
-                return res.status(500).json({ error: 'Error uploading file' });
-            }
+        const img = {
+            data: Buffer.from(image, 'base64'),
+            contentType: 'image/png'
         }
-
-        );
-
         const newSocialMedia = {
             site,
             link,
-            icon: dbPath
+            icon: img
         };
 
         const socialMedia = new SocialMedia(newSocialMedia);
 
         await socialMedia.save();
 
+        res.status(201).json({ message: 'Social media added successfully' });
+
+    
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ error: 'Internal server error' });
+
     }
 }
 );
-
 
 // view all social media
 router.get('/viewAllSocialMedia', async (req, res) => {
     try {
         const socialMedia = await SocialMedia.find({});
 
-        res.status(200).json({ socialMedia });
+        const socialMediaWithImage = socialMedia.map((social) => {
+            return {
+                site: social.site,
+                link: social.link,
+                icon: {
+                    data: social.icon.data.toString('base64'),
+                    contentType: social.icon.contentType
+                }
+            }
+        });
+
+        res.status(200).json({ socialMedia: socialMediaWithImage });
+
     } catch (error) {
         console.log(error);
     }
 }
-);
 
+);
 // delete social media
 router.delete('/deleteSocialMedia', async (req, res) => {
     try {
@@ -446,60 +451,9 @@ router.delete('/deleteSocialMedia', async (req, res) => {
         const socialMedia = await SocialMedia.findOne({ site: site });
 
         if (socialMedia) {
-            await socialMedia.delete();
-        }
+            await socialMedia.deleteOne ({ site: site });
 
-    } catch (error) {
-        console.log(error);
-    }
-}
-
-);
-
-//update social media
-router.put('/updateSocialMedia', async (req, res) => {
-    try {
-        const { site, link } = req.body;
-
-        const socialMedia = await SocialMedia.findOne({ site: site });
-
-        if (socialMedia) {
-            socialMedia.link = link;
-            await socialMedia.save();
-        }
-
-    } catch (error) {
-        console.log(error);
-    }
-}
-
-);
-
-// update social media icon
-
-router.put('/updateSocialMediaIcon', async (req, res) => {
-    try {
-        const file = req.files.file;
-        const site = req.body.site;
-        const extension = path.extname(file.name);
-        const newFileName = site + extension;
-        const uploadPath = path.join(__dirname, '../public/images/socialMedia', newFileName);
-        const dbPath = '/images/socialMedia/' + newFileName;
-
-        file.mv(uploadPath, async (error) => {
-            if (error) {
-                console.error(error);
-                return res.status(500).json({ error: 'Error uploading file' });
-            }
-        }
-
-        );
-
-        const socialMedia = await SocialMedia.findOne({ site: site });
-
-        if (socialMedia) {
-            socialMedia.icon = dbPath;
-            await socialMedia.save();
+            res.status(200).json({ message: 'Social media deleted successfully' });
         }
 
     } catch (error) {
