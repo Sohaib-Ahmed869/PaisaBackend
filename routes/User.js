@@ -146,7 +146,7 @@ router.post('/signin/superadmin', async (req, res) => {
 router.post('/signin/admin', async (req, res) => {
     try{
         const { email, password } = req.body;
-
+        console.log(email);
         // Find the admin by email
         const admin = await Admin.findOne({ email });
 
@@ -158,18 +158,21 @@ router.post('/signin/admin', async (req, res) => {
         if (admin.block) {
             return res.status(401).json({ error: 'You are blocked by superadmin' });
         }
-
+       
         // Check if the password is correct
-        const isPasswordValid = await bcrypt.compare(password, admin.password);
-
+        let isPasswordValid;
+         isPasswordValid = await bcrypt.compare(password, admin.password);
+         console.log('Entered Password:', password);
+        console.log('Hashed Password in Database:', admin.password);
+        console.log('Is Password Valid:', isPasswordValid);
         if (!isPasswordValid) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         // Generate a JWT token
-        const token = jwt.sign({name: admin.name, type: 'Admin'}, secret, { expiresIn: '1h' }); // Replace with your actual secret key
+        const token = jwt.sign({name: admin.name, type: 'Admin'}, 'your_secret_key', { expiresIn: '1h' }); // Replace with your actual secret key
 
-        res.status(200).json({ result: admin, token });
+        return res.status(200).json({ admin, token });
 
     } catch (error) {
         console.error(error);

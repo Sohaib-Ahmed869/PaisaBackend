@@ -6,9 +6,13 @@ const orderSchema = new mongoose.Schema({
         ref: 'Customer',
         required: true
     },
+    customerName: {
+        type: String,
+        required: true
+    },
     products: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product'
+        type: String,
+        required: true
     }],
     sizes: [{
         type: String
@@ -25,11 +29,16 @@ const orderSchema = new mongoose.Schema({
         min: 1,
         max: 5
     },
-    orderStatus: {
-        type: Boolean,
-        default: false
+    status: {
+        type: String,
+        enum: ['Pending', 'Confirmed', 'Delivered', 'Cancelled'],
+        default: 'Pending'
     },
-    orderDate: { type: Date, required: true },
+    seller_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Seller',
+        required: true
+    },
 });
 
 const Order = mongoose.model('Order', orderSchema);
