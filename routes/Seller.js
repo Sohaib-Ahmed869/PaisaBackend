@@ -3,12 +3,58 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcrypt');
 const multer = require('multer');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
 const Seller = require('../models/Seller');
 const { verifySellerToken } = require('../middleware/VerifySellerToken');
+
+//update profile
+router.put('/updateProfile', verifySellerToken, async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+
+        const token = req.header('Authorization');
+        const decoded = jwt.verify(token, 'your_secret_key');
+        const sellerId = decoded.id;
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const seller = await Seller.findOne({ _id: sellerId });
+
+        if (seller) {
+            seller.name = name;
+            seller.email = email;
+            seller.password = hashedPassword;
+
+            await seller.save();
+        }
+        const tokennew = jwt.sign({name: seller.name, type: 'Seller', id: seller._id}, 'your_secret_key', { expiresIn: '1h' }); // Replace with your actual secret key
+
+
+        return res.status(201).json({ message: 'Profile updated successfully' , tokennew});
+    } catch (error) {
+        console.log(error);
+    }
+}
+);
+
+
+//get profile
+router.get('/getProfile', verifySellerToken, async (req, res) => {
+    try {
+        const token = req.header('Authorization');
+        const decoded = jwt.verify(token, 'your_secret_key');
+
+        const seller = await Seller.findOne({ _id: decoded.id });
+
+        res.status(200).json({ seller });
+    } catch (error) {
+        console.log(error);
+    }
+}
+);
 
 //-----------------------------PRODUCT--------------------------------------------
 

@@ -168,11 +168,11 @@ router.post('/signin/admin', async (req, res) => {
         // Generate a JWT token
         const token = jwt.sign({name: admin.name, type: 'Admin'}, 'your_secret_key', { expiresIn: '1h' }); // Replace with your actual secret key
 
-        res.status(200).json({ token });
+        return res.status(200).json({ token,admin });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
