@@ -25,7 +25,7 @@ app.use('/admin', adminRouter);
 app.use('/customer', customerRouter);
 
 
-mongoose.connect('mongodb://127.0.0.1:27017/ecommerce').then(() => {
+mongoose.connect('mongodb+srv://sohaibsipra869:nvidia940MX@cluster0.dcrk8mp.mongodb.net/e-commerce').then(() => {
     console.log('Connected to database');
 }
 ).catch((error) => {
